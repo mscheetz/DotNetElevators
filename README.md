@@ -59,7 +59,7 @@ Fields are optional. `0` or omitted values pick random floor/destination.
 ## Running
 
 ```bash
-dotnet run
+dotnet run --project server/src/dotnetElevators.csproj 
 ```
 
 Opens `http://localhost:5000` by default. Simulation runs immediately; API is available on startup.
