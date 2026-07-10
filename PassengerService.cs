@@ -59,9 +59,9 @@ public class PassengerService : BackgroundService
 
         Building.Floors[floor].QueuePassenger(passenger);
 
-        _logger.LogInformation($"[{floor}] New Passenger on floor {floor} -> {destination}");
+        _logger.LogInformation("--{Floor}-- New Passenger on floor {Floor} -> {Destination}", floor, floor, destination);
 
-        var calledElevator = await _buildingService.CallElevator(floor);
+        var calledElevator = await _buildingService.CallElevator(floor, passenger.Direction);
 
         if (calledElevator.HasValue)
         {

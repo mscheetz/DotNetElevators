@@ -33,7 +33,7 @@ public class BuildingService
         _logger.LogInformation($"{Building.Elevators.Count} Elevators ready for service");
     }
 
-    public async Task<int?> ElevatorArrivesAtFloor(int elevatorNumber, int destinationFloor)
+    public async Task ElevatorArrivesAtFloor(int elevatorNumber, int destinationFloor)
     {
         var elevator = Building.Elevators[elevatorNumber];
 
@@ -50,11 +50,14 @@ public class BuildingService
             var queueItem = new QueueItem(elevatorNumber, destinationFloor);
             await _queueManager.AddToQueueAsync(queueItem);
         }
-
-        return elevator.Passengers.Any() ? elevator.DestinationFloor : null;
+        else if (elevator.Passengers.Any())
+        {
+            var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor!.Value);
+            await _queueManager.AddToQueueAsync(queueItem);
+        }
     }
 
-    public async Task<int?> CallElevator(int floor)
+    public async Task<int?> CallElevator(int floor, Direction requestedDirection)
     {
         var idleElevators = Building.Elevators.Values.Where(e => e.DestinationFloor is null).ToList();
         
@@ -64,12 +67,19 @@ public class BuildingService
             return null;
         }
 
-        if (Building.Elevators.Values.Any(e => 
-            (e.CurrentFloor < floor && e.ElevatorDirection == Direction.UP)
-            || (e.CurrentFloor > floor && e.ElevatorDirection == Direction.DOWN)
-            || e.CurrentFloor == floor && e.DoorOpen))
+        var willPass = Building.Elevators.Values.Any(e =>
+            e.ElevatorDirection == requestedDirection &&
+            (
+                (e.ElevatorDirection == Direction.UP && e.CurrentFloor < floor && e.DestinationFloor >= floor)
+                ||
+                (e.ElevatorDirection == Direction.DOWN && e.CurrentFloor > floor && e.DestinationFloor <= floor)
+            )
+            ||
+            (e.CurrentFloor == floor && e.DoorOpen));
+
+        if (willPass)
         {
-            _logger.LogInformation("Closer elevator currently enroute to {Floor}", floor);
+            _logger.LogInformation("[E] Elevator enroute to {Floor}", floor);
             return null;
         }
 
@@ -86,6 +96,8 @@ public class BuildingService
         var queueItem = new QueueItem(bestElevator.Id, floor);
         
         await _queueManager.AddToQueueAsync(queueItem);
+
+        _logger.LogInformation("[{Elevator}] **** Elevator now in service! ****", bestElevator.Id);
 
         return bestElevator.Id;
     }

@@ -93,29 +93,6 @@ public class ElevatorManagementService: BackgroundService
 
         await Task.Delay(delay, token);
 
-        var nextFloor = await _buildingService.ElevatorArrivesAtFloor(queueItem.elevatorNumber, queueItem.destinationFloor);
-
-        if (nextFloor.HasValue)
-        {
-            var newQueueItem = new QueueItem(queueItem.elevatorNumber, nextFloor.Value);
-            switch (queueItem.elevatorNumber)
-            {
-                case 1:            
-                    await _queues.AddToQueue1Async(newQueueItem);
-                    break;
-                case 2:            
-                    await _queues.AddToQueue2Async(newQueueItem);
-                    break;
-                case 3:            
-                    await _queues.AddToQueue3Async(newQueueItem);
-                    break;
-                case 4:            
-                    await _queues.AddToQueue4Async(newQueueItem);
-                    break;
-                default:
-                    _logger.LogError($"Unknown elevator number {queueItem.elevatorNumber}");
-                    break;
-            }
-        }
+        await _buildingService.ElevatorArrivesAtFloor(queueItem.elevatorNumber, queueItem.destinationFloor);
     }
 }

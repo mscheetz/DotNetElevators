@@ -72,6 +72,7 @@ public class Elevator
     public HashSet<string> ArriveAtFloor(int newFloor, List<Passenger> pendingPassengers)
     {
         Console.WriteLine($"[{Id}] Arriving at floor {newFloor}");
+        CurrentFloor = newFloor;
 
         if (newFloor == Building.MAX_FLOOR)
         {
@@ -114,7 +115,6 @@ public class Elevator
     public void OpenDoors()
     {
         DoorOpen = true;
-        CurrentFloor++;
         Passengers.RemoveAll(p => p.Destination == CurrentFloor);
     }
 }
