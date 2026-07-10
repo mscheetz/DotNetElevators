@@ -78,6 +78,10 @@ public class PassengerController : ControllerBase
         {
             return BadRequest("Invalid Destination");
         }
+        if (incoming.PassengerCount <= 0)
+        {
+            incoming.PassengerCount = 1;
+        }
 
         var newPassengers = incoming.ToPassengers();
 
