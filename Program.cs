@@ -1,7 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using DotNetElevators;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 Console.WriteLine(@"
       ___                         ___                        ___                                   ___           ___                    ___           ___           ___           ___           ___     
@@ -17,14 +15,18 @@ Console.WriteLine(@"
      \__\/                       \__\/           ~~~~       \__\/                                 \__\/         \__\/                  \__\/         \__\/         \__\/         \__\/         \__\/    
 ");
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddScoped<BuildingService>();
+builder.Services.AddSingleton<BuildingService>();
 builder.Services.AddSingleton<QueueManager>();
+builder.Services.AddSingleton<PassengerService>();
 
 builder.Services.AddHostedService<ElevatorManagementService>();
-builder.Services.AddHostedService<PassengerService>();
+builder.Services.AddHostedService<PassengerTimer>();
+builder.Services.AddControllers();
 
-using var host = builder.Build();
+using var app = builder.Build();
 
-await host.RunAsync();
+app.MapControllers();
+
+await app.RunAsync();

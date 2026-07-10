@@ -1,9 +1,7 @@
-
 namespace DotNetElevators;
 
 public class Passenger
 {
-
     public string Id {get;set;}
     public int Source {get;set;}
     public int Destination {get;set;}

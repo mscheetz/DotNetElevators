@@ -1,0 +1,52 @@
+###
+# Get Floors
+
+http://localhost:5000/api/floors
+
+###
+# Get Floors
+
+http://localhost:5000/api/floors/1
+
+### 
+# Get Elevators
+http://localhost:5000/api/elevators
+
+### 
+# Get Elevator
+http://localhost:5000/api/elevators/2
+
+### 
+# Get Passengers
+http://localhost:5000/api/passengers
+
+### 
+# Get Passenger
+http://localhost:5000/api/passengers/H1SbRGIhc0qOhGFtcRsqPg
+
+###
+# Add Passenger
+POST http://localhost:5000/api/passengers
+Content-Type: application/json
+
+{
+    "Floor": 1
+}
+
+###
+# Add Passenger
+POST http://localhost:5000/api/passengers
+Content-Type: application/json
+
+{
+    "Floor": 100
+}
+
+###
+# Add Passenger
+POST http://localhost:5000/api/passengers
+Content-Type: application/json
+
+{
+    "PassengerCount": 100
+}
