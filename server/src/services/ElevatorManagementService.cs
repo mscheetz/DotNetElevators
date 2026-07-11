@@ -5,7 +5,7 @@ namespace DotNetElevators;
 public class ElevatorManagementService: BackgroundService
 {
     private readonly BuildingService _buildingService;
-    private readonly QueueManager _queues;
+    private readonly QueueManager _queueManager;
     private readonly ILogger<ElevatorManagementService> _logger;
 
     public ElevatorManagementService(
@@ -14,41 +14,34 @@ public class ElevatorManagementService: BackgroundService
         ILogger<ElevatorManagementService> logger)
     {
         _buildingService = buildingService;
-        _queues = queueManager;
+        _queueManager = queueManager;
         _logger = logger;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Task queue1Task = ProcessQueueAsync(
-            "Elevator 1",
-            _queues.Queue1.Reader,
-            ProcessElevator,
-            stoppingToken);
+        var queueTasks = new List<Task>();
 
-        Task queue2Task = ProcessQueueAsync(
-            "Elevator 2",
-            _queues.Queue2.Reader,
-            ProcessElevator,
-            stoppingToken);
+        try
+        {
+            await foreach (var registration in _queueManager.NewQueues.ReadAllAsync(stoppingToken))
+            {
+                var task = ProcessQueueAsync(
+                    $"Elevator {registration.ElevatorNumber}",
+                    registration.Queue.Reader,
+                    ProcessElevator,
+                    stoppingToken
+                );
 
-        Task queue3Task = ProcessQueueAsync(
-            "Elevator 3",
-            _queues.Queue3.Reader,
-            ProcessElevator,
-            stoppingToken);
-
-        Task queue4Task = ProcessQueueAsync(
-            "Elevator 4",
-            _queues.Queue4.Reader,
-            ProcessElevator,
-            stoppingToken);
-
-        return Task.WhenAll(
-            queue1Task,
-            queue2Task,
-            queue3Task,
-            queue4Task);
+                queueTasks.Add(task);
+            }
+        }
+        catch (OperationCanceledException)
+            when (stoppingToken.IsCancellationRequested)
+        {            
+        }
+        
+        await Task.WhenAll(queueTasks);
     }
 
     private async Task ProcessQueueAsync(

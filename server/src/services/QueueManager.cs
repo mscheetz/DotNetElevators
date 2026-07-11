@@ -1,18 +1,52 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace DotNetElevators;
 
 public sealed class QueueManager
 {
-    public Channel<QueueItem> Queue1 { get; } = CreateQueue();
-    public Channel<QueueItem> Queue2 { get; } = CreateQueue();
-    public Channel<QueueItem> Queue3 { get; } = CreateQueue();
-    public Channel<QueueItem> Queue4 { get; } = CreateQueue();
+    private readonly ConcurrentDictionary<int, Channel<QueueItem>> _queues = [];
+    private readonly int _capacity;
 
-    private static Channel<QueueItem> CreateQueue()
+    private readonly Channel<QueueRegistration> _newQueues = Channel.CreateUnbounded<QueueRegistration>();
+
+    public ChannelReader<QueueRegistration> NewQueues => _newQueues.Reader;
+
+    public QueueManager(int capacity = 1000)
+    {
+        if (capacity <= 0)
+        {
+            capacity = 1;
+        }
+
+        _capacity = capacity;
+    }
+
+    public Channel<QueueItem> GetQueue(int elevatorNumber)
+    {
+        if (elevatorNumber <= 0)
+        {
+            elevatorNumber = 1;
+        }
+
+        return _queues.GetOrAdd(elevatorNumber,
+        number =>
+        {
+            var queue = CreateQueue();
+
+            if (!_newQueues.Writer.TryWrite(new QueueRegistration(number, queue)))
+            {
+                throw new Exception($"Could not register queue for elevator {number}");
+            }
+
+            return queue;
+        });
+    }
+
+    private Channel<QueueItem> CreateQueue()
     {
         return Channel.CreateBounded<QueueItem>(
-            new BoundedChannelOptions(capacity: 1_000)
+            new BoundedChannelOptions(_capacity)
             {
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true,
@@ -22,55 +56,12 @@ public sealed class QueueManager
 
     public async ValueTask AddToQueueAsync(QueueItem item, CancellationToken cancellationToken = default)
     {
-        switch (item.elevatorNumber)
-        {
-            case 1:
-                await AddToQueue1Async(item, cancellationToken);
-                break;
+        var queue = GetQueue(item.elevatorNumber);
 
-            case 2:
-                await AddToQueue2Async(item, cancellationToken);
-                break;
-
-            case 3:
-                await AddToQueue3Async(item, cancellationToken);
-                break;
-
-            case 4:
-                await AddToQueue4Async(item, cancellationToken);
-                break;
-
-            default:                
-                break;
-
-        }
-    }
-
-    public ValueTask AddToQueue1Async(
-        QueueItem item,
-        CancellationToken cancellationToken = default)
-    {
-        return Queue1.Writer.WriteAsync(item, cancellationToken);
-    }
-
-    public ValueTask AddToQueue2Async(
-        QueueItem item,
-        CancellationToken cancellationToken = default)
-    {
-        return Queue2.Writer.WriteAsync(item, cancellationToken);
-    }
-
-    public ValueTask AddToQueue3Async(
-        QueueItem item,
-        CancellationToken cancellationToken = default)
-    {
-        return Queue3.Writer.WriteAsync(item, cancellationToken);
-    }
-
-    public ValueTask AddToQueue4Async(
-        QueueItem item,
-        CancellationToken cancellationToken = default)
-    {
-        return Queue4.Writer.WriteAsync(item, cancellationToken);
+        await queue.Writer.WriteAsync(item, cancellationToken);
     }
 }
+
+public sealed record QueueRegistration(
+    int ElevatorNumber,
+    Channel<QueueItem> Queue);
