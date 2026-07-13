@@ -5,7 +5,7 @@ public class Passenger
     public string Id {get;set;}
     public int Source {get;set;}
     public int Destination {get;set;}
-    public bool Vip {get;set;}
+    public bool VIP {get;set;}
     public Direction Direction {get;set;}
 
     public Passenger(int source, int destination)

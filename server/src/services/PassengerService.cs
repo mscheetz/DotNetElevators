@@ -23,7 +23,7 @@ public class PassengerService
         var vipStatus = HelperService.GetRandomizedVIP();
 
         var passenger = new Passenger(floor, destination);
-        passenger.Vip = vipStatus;
+        passenger.VIP = vipStatus;
 
         await AddNewPassenger(passenger);
     }

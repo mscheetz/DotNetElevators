@@ -45,12 +45,12 @@ public class BuildingService
             return;
         }
 
-        var pendingPassengers = Building.Floors[floor].QueuedPassengers.Where(p => p.Direction == elevator.ElevatorDirection).ToList();
+        //var pendingPassengers = Building.Floors[floor].QueuedPassengers.Where(p => p.Direction == elevator.ElevatorDirection).ToList();
 
-        var departedPassengers = elevator.ArriveAtFloor(floor, pendingPassengers);
+        var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
         Building.Floors[floor].PassengersDeparted(departedPassengers);
 
-        var vips = elevator.Passengers.Where(p => p.Vip);
+        var vips = elevator.Passengers.Where(p => p.VIP);
         
         if (vips.Any())
         {
@@ -75,7 +75,7 @@ public class BuildingService
 
     private async Task<bool> GoToVIPFloor(Elevator elevator, int floor)
     {
-        var vips = elevator.Passengers.Where(p => p.Vip);
+        var vips = elevator.Passengers.Where(p => p.VIP);
 
         if (vips.Any())
         {

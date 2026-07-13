@@ -59,7 +59,7 @@ public class Elevator
             return;
         }
 
-        var vips = Passengers.Where(p => p.Vip);
+        var vips = Passengers.Where(p => p.VIP);
 
         if (ElevatorDirection == Direction.UP)
         {            
@@ -102,7 +102,9 @@ public class Elevator
 
             OpenDoors();
 
-            var newPassengerIds = AddPassengers(pendingPassengers);
+            DirectionChangedCheck();
+
+            var newPassengerIds = AddPassengers(pendingPassengers.Where(p => p.Direction == ElevatorDirection).ToList());
 
             SetDestination();
 
@@ -122,5 +124,34 @@ public class Elevator
     {
         DoorOpen = true;
         Passengers.RemoveAll(p => p.Destination == CurrentFloor);
+    }
+
+    public bool DirectionChangedCheck()
+    {
+        if (!Passengers.Any())
+        {
+            return false;
+        }
+
+        var minFloor = Passengers.Min(p => p.Destination);
+        var maxFloor = Passengers.Max(p => p.Destination);
+
+        if (ElevatorDirection == Direction.UP 
+            && maxFloor < CurrentFloor)
+        {
+            ElevatorDirection = Direction.DOWN;
+            Console.WriteLine($"[{Id}] Direction changed continuing");
+            return true;
+        }
+
+        if (ElevatorDirection == Direction.DOWN
+            && minFloor > CurrentFloor)
+        {
+            ElevatorDirection = Direction.UP;
+            Console.WriteLine($"[{Id}] Direction changed continuing");
+            return true;   
+        }
+
+        return false;
     }
 }

@@ -27,11 +27,11 @@ public class NewPassengerRequest
             
             if (Vip)
             {
-                passenger.Vip = true;
+                passenger.VIP = true;
             }
             else if (RandomizeVip)
             {
-                passenger.Vip = HelperService.GetRandomizedVIP();
+                passenger.VIP = HelperService.GetRandomizedVIP();
             }
 
             passengers.Add(passenger);
