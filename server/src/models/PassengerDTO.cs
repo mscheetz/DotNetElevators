@@ -6,7 +6,7 @@ public class PassengerDTO
     public string Status {get;set;} = string.Empty;
     public int? ElevatorId {get;set;}
     public int? FloorNumber {get;set;}
-    public bool Vip {get;set;}
+    public bool VIP {get;set;}
     public string Direction {get;set;} = string.Empty;
 
     public PassengerDTO(string id, Floor? floor, Elevator? elevator)

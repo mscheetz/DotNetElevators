@@ -1,16 +1,17 @@
-using Microsoft.Extensions.Logging;
-
 namespace DotNetElevators;
 
 public class BuildingService
 {
+    private readonly BuildingBroadcastService _broadcastService;
     private readonly QueueManager _queueManager;
     private readonly ILogger<BuildingService> _logger;
 
     public BuildingService(
+        BuildingBroadcastService buildingBroadcastService,
         QueueManager queueManager,
         ILogger<BuildingService> logger)
     {
+        _broadcastService = buildingBroadcastService;
         _queueManager = queueManager;
         _logger = logger;
         ResetBuilding();
@@ -45,10 +46,11 @@ public class BuildingService
             return;
         }
 
-        //var pendingPassengers = Building.Floors[floor].QueuedPassengers.Where(p => p.Direction == elevator.ElevatorDirection).ToList();
-
         var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
+
         Building.Floors[floor].PassengersDeparted(departedPassengers);
+
+        await BroadcastFloor(floor);
 
         var vips = elevator.Passengers.Where(p => p.VIP);
         
@@ -63,11 +65,13 @@ public class BuildingService
 
         if (floor != destinationFloor)
         {
+            await BroadcastElevator(elevator);
             var queueItem = new QueueItem(elevatorNumber, destinationFloor);
             await _queueManager.AddToQueueAsync(queueItem);
         }
         else if (elevator.Passengers.Any())
         {
+            await BroadcastElevator(elevator);
             var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor!.Value);
             await _queueManager.AddToQueueAsync(queueItem);
         }
@@ -88,6 +92,7 @@ public class BuildingService
                 elevator.CurrentFloor = floor;
                 elevator.DestinationFloor = closestDestination;
 
+                await BroadcastElevator(elevator);
                 _logger.LogInformation("[{Elevator}]: VIP destination {Destination}; skipping this floor ({Floor})", elevator.Id, closestDestination, floor);
                 var queueItem = new QueueItem(elevator.Id, closestDestination);
                 await _queueManager.AddToQueueAsync(queueItem);
@@ -135,12 +140,23 @@ public class BuildingService
         bestElevator.DestinationFloor = floor;
         bestElevator.ElevatorDirection = bestElevator.CurrentFloor > floor ? Direction.DOWN : Direction.UP;;
 
-        var queueItem = new QueueItem(bestElevator.Id, floor);
-        
+        await BroadcastElevator(bestElevator);
+
+        var queueItem = new QueueItem(bestElevator.Id, floor);        
         await _queueManager.AddToQueueAsync(queueItem);
 
         _logger.LogInformation("[{Elevator}] **** Elevator now in service! ****", bestElevator.Id);
 
         return bestElevator.Id;
+    }
+
+    public Task BroadcastElevator(Elevator elevator)
+    {
+        return _broadcastService.BroadcastElevator(new ElevatorDTO(elevator));
+    }
+
+    public Task BroadcastFloor(int floorNumber)
+    {
+        return _broadcastService.BroadcastFloor(floorNumber);
     }
 }

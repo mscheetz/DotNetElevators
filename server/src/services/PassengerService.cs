@@ -2,13 +2,16 @@ namespace DotNetElevators;
 
 public class PassengerService
 {
+    private readonly BuildingBroadcastService _broadcastService;
     private readonly BuildingService _buildingService;
     private readonly ILogger<PassengerService> _logger;
 
     public PassengerService(
+        BuildingBroadcastService buildingBroadcastService,
         BuildingService buildingService,
         ILogger<PassengerService> logger)
     {
+        _broadcastService = buildingBroadcastService;
         _buildingService = buildingService;
         _logger = logger;
     }
@@ -32,6 +35,9 @@ public class PassengerService
     {
         Building.Floors[passenger.Source].QueuePassenger(passenger);
 
+        await BroadcastFloor(passenger.Source);
+        await BroadcastPassenger(passenger);
+        
         _logger.LogInformation("--{Floor}-- New Passenger on floor {Floor} -> {Destination}", passenger.Source, passenger.Source, passenger.Destination);
 
         var calledElevator = await _buildingService.CallElevator(passenger.Source, passenger.Direction);
@@ -44,5 +50,15 @@ public class PassengerService
         {
             _logger.LogInformation("An elevator is enroute to floor {Floor}", passenger.Source);
         }        
+    }
+
+    public Task BroadcastFloor(int floorNumber)
+    {
+        return _broadcastService.BroadcastFloor(floorNumber);
+    }
+
+    public Task BroadcastPassenger(Passenger passenger)
+    {
+        return _broadcastService.BroadcastPassenger(passenger.Id);
     }
 }

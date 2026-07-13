@@ -1,11 +1,12 @@
 # dotnetElevators
 
-Office building elevator simulator using `Channel<T>`-based background services with an ASP.NET Web API.
+Office building elevator simulator using `Channel<T>`-based background services with an ASP.NET Web API and real-time SignalR broadcasts.
 
 ## Stack
 
 - .NET 10
 - ASP.NET Core (`Microsoft.NET.Sdk.Web`)
+- SignalR for real-time client updates
 - `System.Threading.Channels` for per-elevator async queues
 
 ## Architecture
@@ -15,7 +16,8 @@ PassengerTimer (timed background loop)
        |
        v
 PassengerService.AddNewPassenger()
-       |
+       |     \
+       |      +---> BuildingBroadcastService (SignalR: ElevatorUpdated / FloorUpdated / PassengerUpdated)
        v
 BuildingService.CallElevator() -> dispatches best idle elevator
        |
@@ -29,10 +31,41 @@ ElevatorManagementService (4 readers, processes arrivals)
 BuildingService.ElevatorArrivesAtFloor()
        |
        v
-Elevator.ArriveAtFloor() -> AddPassengers / SetDestination
+Elevator.ArriveAtFloor() -> AddPassengers / SetDestination / DirectionChangedCheck (VIP)
 ```
 
-## API Endpoints
+## VIP Passengers
+
+VIP passengers cause the elevator to skip all intermediate floors until the VIP's destination is reached. When VIPs exit:
+- `DirectionChangedCheck` evaluates remaining passengers
+- If all remaining destinations are behind the current floor, elevator reverses direction
+- After reversal, boards any queued passengers going the new direction at the current floor
+
+VIP probability controlled by `VIP_PROBABILITY` in `Building.cs` (default 0.01).
+
+## SignalR Hub
+
+| Hub | Route |
+|---|---|
+| `BuildingHub` | `/hubs/building` |
+
+### Events
+
+| Event | Payload | Fires when |
+|---|---|---|
+| `ElevatorUpdated` | `ElevatorDTO` | Elevator dispatched, arrives at floor, changes direction, or VIP enters |
+| `FloorUpdated` | `FloorDTO` | Passenger queued or departs from a floor |
+| `PassengerUpdated` | `PassengerDTO` | Passenger created (spawned via timer or API) |
+
+### Test client
+
+```bash
+dotnet run --project server/test
+```
+
+Connects to `http://localhost:5000/hubs/building` and prints events. Press Enter to exit.
+
+## REST API Endpoints
 
 | Method | Route | Description |
 |---|---|---|
@@ -50,19 +83,25 @@ Elevator.ArriveAtFloor() -> AddPassengers / SetDestination
 {
   "floor": 3,
   "destination": 8,
-  "passengerCount": 2
+  "passengerCount": 2,
+  "vip": true,
+  "randomizeVip": false
 }
 ```
 
-Fields are optional. `0` or omitted values pick random floor/destination.
+Fields are optional. `0` or omitted values pick random floor/destination. `vip` marks all spawned passengers as VIP. `randomizeVip` applies `VIP_PROBABILITY` per passenger.
 
 ## Running
 
 ```bash
-dotnet run --project server/src/dotnetElevators.csproj 
+# Start the simulation + API
+dotnet run --project server/src
+
+# In another terminal, watch events
+dotnet run --project server/tests
 ```
 
-Opens `http://localhost:5000` by default. Simulation runs immediately; API is available on startup.
+Opens `http://localhost:5000` by default. Simulation runs immediately; API and SignalR hub are available on startup.
 
 ## Config
 
@@ -76,3 +115,4 @@ All in `Building.cs`:
 | `ELEVATOR_COUNT` | 4 |
 | `ELEVATOR_TRAVEL_SPEED_SEC` | 2 |
 | `NEW_PASSENGER_SPAWN_SPEED_SEC` | 3 |
+| `VIP_PROBABILITY` | 0.01 |
