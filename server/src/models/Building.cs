@@ -11,4 +11,5 @@ public static class Building
     public static int ELEVATOR_COUNT = 4;
     public static int ELEVATOR_TRAVEL_SPEED_SEC = 2;
     public static int NEW_PASSENGER_SPAWN_SPEED_SEC = 3;
+    public static double VIP_PROBABILITY = 0.10;
 }

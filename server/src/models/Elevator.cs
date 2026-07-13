@@ -59,13 +59,19 @@ public class Elevator
             return;
         }
 
+        var vips = Passengers.Where(p => p.Vip);
+
         if (ElevatorDirection == Direction.UP)
-        {
-            DestinationFloor = Passengers.Min(p => p.Destination);
+        {            
+            DestinationFloor = vips.Any() 
+                                ? vips.Min(p => p.Destination)
+                                : Passengers.Min(p => p.Destination);
         }
         else 
         {
-            DestinationFloor = Passengers.Max(p => p.Destination);
+            DestinationFloor = vips.Any()
+                                ? vips.Max(p => p.Destination)
+                                : Passengers.Max(p => p.Destination);
         }
     }
 

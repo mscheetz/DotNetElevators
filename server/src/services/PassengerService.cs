@@ -20,8 +20,10 @@ public class PassengerService
 
         var floor = HelperService.GetRandomFloor();
         var destination = HelperService.GetRandomFloor(floor);
+        var vipStatus = HelperService.GetRandomizedVIP();
 
         var passenger = new Passenger(floor, destination);
+        passenger.Vip = vipStatus;
 
         await AddNewPassenger(passenger);
     }

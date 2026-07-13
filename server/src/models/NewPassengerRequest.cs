@@ -5,6 +5,8 @@ public class NewPassengerRequest
     public int Floor {get;set;}
     public int Destination {get;set;}
     public int PassengerCount {get;set;} = 1;
+    public bool Vip {get;set;}
+    public bool RandomizeVip {get;set;}
 
     public List<Passenger> ToPassengers()
     {
@@ -21,7 +23,18 @@ public class NewPassengerRequest
 
         for (var i = 0; i < PassengerCount; i++)
         {
-            passengers.Add(new Passenger(Floor, Destination));
+            var passenger = new Passenger(Floor, Destination);
+            
+            if (Vip)
+            {
+                passenger.Vip = true;
+            }
+            else if (RandomizeVip)
+            {
+                passenger.Vip = HelperService.GetRandomizedVIP();
+            }
+
+            passengers.Add(passenger);
         }
 
         return passengers;

@@ -19,4 +19,9 @@ public static class HelperService
 
         return floor;
     }
+
+    public static bool GetRandomizedVIP()
+    {
+        return Random.Shared.NextDouble() < Building.VIP_PROBABILITY;
+    }
 }

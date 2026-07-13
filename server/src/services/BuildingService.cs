@@ -40,10 +40,26 @@ public class BuildingService
         var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
         var floor = elevator.CurrentFloor + variance;
 
+        if (await GoToVIPFloor(elevator, floor))
+        {
+            return;
+        }
+
         var pendingPassengers = Building.Floors[floor].QueuedPassengers.Where(p => p.Direction == elevator.ElevatorDirection).ToList();
 
         var departedPassengers = elevator.ArriveAtFloor(floor, pendingPassengers);
         Building.Floors[floor].PassengersDeparted(departedPassengers);
+
+        var vips = elevator.Passengers.Where(p => p.Vip);
+        
+        if (vips.Any())
+        {
+            destinationFloor = elevator.ElevatorDirection == Direction.UP 
+                                                    ? vips.Min(p => p.Destination)
+                                                    : vips.Max(p => p.Destination);
+
+            _logger.LogInformation("[{Elevator}]: VIP entered elevator, new destination is floor {Destination}", elevatorNumber, destinationFloor);            
+        }
 
         if (floor != destinationFloor)
         {
@@ -55,6 +71,32 @@ public class BuildingService
             var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor!.Value);
             await _queueManager.AddToQueueAsync(queueItem);
         }
+    }
+
+    private async Task<bool> GoToVIPFloor(Elevator elevator, int floor)
+    {
+        var vips = elevator.Passengers.Where(p => p.Vip);
+
+        if (vips.Any())
+        {
+            var closestDestination = elevator.ElevatorDirection == Direction.UP 
+                                                    ? vips.Min(p => p.Destination)
+                                                    : vips.Max(p => p.Destination);
+
+            if (closestDestination != floor)
+            {
+                elevator.CurrentFloor = floor;
+                elevator.DestinationFloor = closestDestination;
+
+                _logger.LogInformation("[{Elevator}]: VIP destination {Destination}; skipping this floor ({Floor})", elevator.Id, closestDestination, floor);
+                var queueItem = new QueueItem(elevator.Id, closestDestination);
+                await _queueManager.AddToQueueAsync(queueItem);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<int?> CallElevator(int floor, Direction requestedDirection)
