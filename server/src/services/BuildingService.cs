@@ -34,7 +34,7 @@ public class BuildingService
         _logger.LogInformation($"{Building.Elevators.Count} Elevators ready for service");
     }
 
-    public async Task ElevatorArrivesAtFloor(int elevatorNumber, int destinationFloor)
+    public async Task ElevatorArrivesAtFloorV1(int elevatorNumber, int destinationFloor)
     {
         var elevator = Building.Elevators[elevatorNumber];
 
@@ -60,6 +60,21 @@ public class BuildingService
         if (await GoToVIPFloor(elevator, floor, oldFloor))
         {
             return;
+        }
+
+        if(!Building.Floors[floor].QueuedPassengers.Any(p => p.Direction == elevator.ElevatorDirection)
+            && !elevator.Passengers.Any(p => p.Destination == floor) )
+        {
+            _logger.LogInformation("[{Elevator}] : No passengers getting off and no queued passengers on {Floor}", elevatorNumber, floor);
+            elevator.CurrentFloor = floor;
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+            await BroadcastFloor(floor);
+
+            var queueItem = new QueueItem(elevatorNumber, destinationFloor);
+            await _queueManager.AddToQueueAsync(queueItem);
+
+            return;            
         }
 
         var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
@@ -133,6 +148,121 @@ public class BuildingService
         {
             await BroadcastElevator(elevator);
             var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor!.Value);
+            await _queueManager.AddToQueueAsync(queueItem);
+        }
+    }
+
+    public async Task ElevatorArrivesAtFloor(int elevatorNumber, int destinationFloor)
+    {
+        var elevator = Building.Elevators[elevatorNumber];
+        var oldFloor = elevator.CurrentFloor;
+        var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
+        var floor = elevator.CurrentFloor + variance;
+
+        // Floor inactive — skip
+        if (!Building.Floors[floor].IsActive)
+        {
+            elevator.CurrentFloor = floor;
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+
+            if (floor != destinationFloor)
+            {
+                var queueItem = new QueueItem(elevatorNumber, destinationFloor);
+                await _queueManager.AddToQueueAsync(queueItem);
+            }
+            return;
+        }
+
+        // VIP on board — delegate to VIP handler (it broadcasts and enqueues)
+        if (await GoToVIPFloor(elevator, floor, oldFloor))
+        {
+            return;
+        }
+
+        var queuedSameDir = Building.Floors[floor].QueuedPassengers.Where(p => p.Direction == elevator.ElevatorDirection).ToList();
+        var passengersGettingOff = elevator.Passengers.Any(p => p.Destination == floor);
+
+        // CONTINUE — no reason to stop at this floor
+        if (!passengersGettingOff && queuedSameDir.Count == 0)
+        {
+            elevator.CurrentFloor = floor;
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+            await BroadcastFloor(floor);
+
+            if (floor != destinationFloor)
+            {
+                var queueItem = new QueueItem(elevatorNumber, destinationFloor);
+                await _queueManager.AddToQueueAsync(queueItem);
+            }
+            return;
+        }
+
+        // STOP — open doors, let off, pick up
+        var previousDirection = elevator.ElevatorDirection;
+        var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
+        Building.Floors[floor].PassengersDeparted(departedPassengers);
+
+        if (!elevator.Passengers.Any())
+        {
+            // EMPTY AFTER STOP — find work or idle
+            var queuedAnywhere = Building.Floors.Values
+                .SelectMany(f => f.QueuedPassengers)
+                .ToList();
+
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+            await BroadcastFloor(floor);
+
+            if (queuedAnywhere.Count == 0)
+            {
+                elevator.DestinationFloor = null;
+                elevator.ElevatorDirection = null;
+
+                await BroadcastElevator(elevator);
+                await BroadcastFloor(oldFloor);
+                await BroadcastFloor(floor);
+
+                return;
+            }
+
+            var dir = previousDirection ?? Direction.UP;
+            var sameDirQueue = queuedAnywhere.Where(p => p.Direction == dir).ToList();
+            var oppDirQueue = queuedAnywhere.Where(p => p.Direction != dir).ToList();
+
+            var targetFloor = sameDirQueue.Count > 0
+                ? (dir == Direction.UP
+                    ? sameDirQueue.Max(p => p.Source)
+                    : sameDirQueue.Min(p => p.Source))
+                : (dir == Direction.UP
+                    ? oppDirQueue.Min(p => p.Source)
+                    : oppDirQueue.Max(p => p.Source));
+
+            if (targetFloor == floor)
+            {
+                return;
+            }
+
+            elevator.DestinationFloor = targetFloor;
+            elevator.ElevatorDirection = targetFloor > floor ? Direction.UP : Direction.DOWN;
+
+            _logger.LogInformation("[{Elevator}]: Empty after stop, heading to floor {Floor}", elevatorNumber, targetFloor);
+            await BroadcastElevator(elevator);
+
+            var queueItem = new QueueItem(elevatorNumber, targetFloor);
+            await _queueManager.AddToQueueAsync(queueItem);
+            return;
+        }
+
+        // HAS PASSENGERS — continue toward destination
+        await BroadcastElevator(elevator);
+        await BroadcastFloor(oldFloor);
+        await BroadcastFloor(floor);
+
+        if (elevator.DestinationFloor.HasValue && elevator.DestinationFloor != floor)
+        {
+            var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor.Value);
             await _queueManager.AddToQueueAsync(queueItem);
         }
     }

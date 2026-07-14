@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../signalr.tests/dotnetElevators.SignalR.Test.csproj" />
+  </ItemGroup>
+
 </Project>
