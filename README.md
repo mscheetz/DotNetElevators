@@ -121,7 +121,7 @@ Fields are optional. `0` or omitted values pick random floor/destination. `vip` 
 dotnet run --project server/src
 
 # In another terminal, watch events
-dotnet run --project server/tests
+dotnet run --project server/signalr.tests
 ```
 
 Opens `http://localhost:5000` by default. Simulation runs immediately; API and SignalR hub are available on startup.
@@ -139,3 +139,10 @@ All in `Building.cs`:
 | `ELEVATOR_TRAVEL_SPEED_SEC` | 2 |
 | `NEW_PASSENGER_SPAWN_SPEED_SEC` | 3 |
 | `VIP_PROBABILITY` | 0.10 |
+
+
+## Unit Tests
+```bash
+# from terminal
+dotnet test server/tests
+```
