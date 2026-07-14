@@ -10,17 +10,17 @@ var connection = new HubConnectionBuilder()
     })
     .Build();
 
-connection.On<DotNetElevators.Test.ElevatorDTO>("ElevatorUpdated", elevator =>
+connection.On<DotNetElevators.SignalR.Test.ElevatorDTO>("ElevatorUpdated", elevator =>
 {
     Console.WriteLine($"Elevator {elevator.Id} : on floor {elevator.CurrentFloor} : direction {elevator.ElevatorDirection} : Has VIP: {elevator.HasVIPs}");
 });
 
-connection.On<DotNetElevators.Test.FloorDTO>("FloorUpdated", floor =>
+connection.On<DotNetElevators.SignalR.Test.FloorDTO>("FloorUpdated", floor =>
 {
     Console.WriteLine($"Floor updated: {floor.FloorNumber} : queuedPassengers {floor.QueuedPassengerCount.Values.Sum()} : queued VIPs {floor.QueuedVIPCount.Values.Sum()}");
 });
 
-connection.On<DotNetElevators.Test.PassengerDTO>("PassengerUpdated", passenger =>
+connection.On<DotNetElevators.SignalR.Test.PassengerDTO>("PassengerUpdated", passenger =>
 {
     Console.WriteLine($"Passenger updated: {passenger.Id} : on floor {passenger.FloorNumber}");
 });
