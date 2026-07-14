@@ -159,6 +159,26 @@ public class BuildingService
         var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
         var floor = elevator.CurrentFloor + variance;
 
+        _logger.LogInformation("[{Elevator}] Arrived at Floor {Floor}", elevatorNumber, floor);
+
+        // Safety: floor out of bounds — correct direction and stay
+        if (floor < Building.MIN_FLOOR || floor > Building.MAX_FLOOR)
+        {
+            elevator.ElevatorDirection = floor < Building.MIN_FLOOR ? Direction.UP : Direction.DOWN;
+            if (floor < Building.MIN_FLOOR)
+            {
+                floor = Building.MIN_FLOOR;
+            }
+            else if (floor > Building.MAX_FLOOR)
+            {
+                floor = Building.MAX_FLOOR;
+            }
+            elevator.CurrentFloor = floor;
+            elevator.DestinationFloor = null;
+            await BroadcastElevator(elevator);
+            //return;
+        }
+
         // Floor inactive — skip
         if (!Building.Floors[floor].IsActive)
         {
@@ -168,6 +188,7 @@ public class BuildingService
 
             if (floor != destinationFloor)
             {
+                _logger.LogInformation("[{Elevator}] Floor {Floor} Inactive; continuing", elevatorNumber, floor);
                 var queueItem = new QueueItem(elevatorNumber, destinationFloor);
                 await _queueManager.AddToQueueAsync(queueItem);
             }
@@ -177,6 +198,7 @@ public class BuildingService
         // VIP on board — delegate to VIP handler (it broadcasts and enqueues)
         if (await GoToVIPFloor(elevator, floor, oldFloor))
         {
+            _logger.LogInformation("[{Elevator}] VIP onboard skipping this floor", elevatorNumber);
             return;
         }
 
@@ -193,15 +215,24 @@ public class BuildingService
 
             if (floor != destinationFloor)
             {
+                _logger.LogInformation("[{Elevator}] No passengers disembarking and Floor {Floor} has no passengers queued; continuing to Destination {Destination}", elevatorNumber, floor, elevator.DestinationFloor);
                 var queueItem = new QueueItem(elevatorNumber, destinationFloor);
                 await _queueManager.AddToQueueAsync(queueItem);
+                return;
             }
+
+            _logger.LogInformation("[{Elevator}] Destination reached! No passengers disembarking and Floor {Floor} has no passengers queued; idling", elevatorNumber, floor);
+            // Reached destination with nothing to do — become idle
+            elevator.DestinationFloor = null;
+            elevator.ElevatorDirection = null;
+            await BroadcastElevator(elevator);
             return;
         }
 
         // STOP — open doors, let off, pick up
         var previousDirection = elevator.ElevatorDirection;
         var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
+        _logger.LogInformation("[{Elevator}] Doors opened. Picked up {Count} queued passengers; continuing", elevatorNumber, departedPassengers.Count);
         Building.Floors[floor].PassengersDeparted(departedPassengers);
 
         if (!elevator.Passengers.Any())
@@ -215,6 +246,7 @@ public class BuildingService
             await BroadcastFloor(oldFloor);
             await BroadcastFloor(floor);
 
+            // No queued passengers anywhere, elevator is now idle
             if (queuedAnywhere.Count == 0)
             {
                 elevator.DestinationFloor = null;
@@ -223,6 +255,8 @@ public class BuildingService
                 await BroadcastElevator(elevator);
                 await BroadcastFloor(oldFloor);
                 await BroadcastFloor(floor);
+
+            _logger.LogInformation("[{Elevator}] No more passengers and Floor {Floor} has no passengers queued; idling", elevatorNumber, floor);
 
                 return;
             }
@@ -247,7 +281,7 @@ public class BuildingService
             elevator.DestinationFloor = targetFloor;
             elevator.ElevatorDirection = targetFloor > floor ? Direction.UP : Direction.DOWN;
 
-            _logger.LogInformation("[{Elevator}]: Empty after stop, heading to floor {Floor}", elevatorNumber, targetFloor);
+            _logger.LogInformation("[{Elevator}]: Empty after stop, heading to floor {Floor} to get queued passengers", elevatorNumber, targetFloor);
             await BroadcastElevator(elevator);
 
             var queueItem = new QueueItem(elevatorNumber, targetFloor);
@@ -262,8 +296,13 @@ public class BuildingService
 
         if (elevator.DestinationFloor.HasValue && elevator.DestinationFloor != floor)
         {
+            _logger.LogInformation("[{Elevator}] Continue to {Destination} to drop off passengers", elevatorNumber, elevator.DestinationFloor);
             var queueItem = new QueueItem(elevatorNumber, elevator.DestinationFloor.Value);
             await _queueManager.AddToQueueAsync(queueItem);
+        }
+        else
+        {
+            _logger.LogInformation("[{Elevator}] OOPS", elevatorNumber);
         }
     }
 
