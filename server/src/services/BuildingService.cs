@@ -159,11 +159,11 @@ public class BuildingService
         var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
         var floor = elevator.CurrentFloor + variance;
 
-        _logger.LogInformation("[{Elevator}] Arrived at Floor {Floor}", elevatorNumber, floor);
-
         // Safety: floor out of bounds — correct direction and stay
         if (floor < Building.MIN_FLOOR || floor > Building.MAX_FLOOR)
         {
+            _logger.LogInformation("[{Elevator}] Floor {Floor} out of bounds, adjusting", elevatorNumber, floor);
+
             elevator.ElevatorDirection = floor < Building.MIN_FLOOR ? Direction.UP : Direction.DOWN;
             if (floor < Building.MIN_FLOOR)
             {
@@ -176,8 +176,9 @@ public class BuildingService
             elevator.CurrentFloor = floor;
             elevator.DestinationFloor = null;
             await BroadcastElevator(elevator);
-            //return;
         }
+
+        _logger.LogInformation("[{Elevator}] Arrived at Floor {Floor}", elevatorNumber, floor);
 
         // Floor inactive — skip
         if (!Building.Floors[floor].IsActive)
@@ -206,7 +207,7 @@ public class BuildingService
         var passengersGettingOff = elevator.Passengers.Any(p => p.Destination == floor);
 
         // CONTINUE — no reason to stop at this floor
-        if (!passengersGettingOff && queuedSameDir.Count == 0)
+        if (elevator.Passengers.Any() && !passengersGettingOff && queuedSameDir.Count == 0)
         {
             elevator.CurrentFloor = floor;
             await BroadcastElevator(elevator);
@@ -231,8 +232,9 @@ public class BuildingService
 
         // STOP — open doors, let off, pick up
         var previousDirection = elevator.ElevatorDirection;
+        var droppedOffPassengerCount = elevator.Passengers.Count(p => p.Destination == floor);
         var departedPassengers = elevator.ArriveAtFloor(floor, Building.Floors[floor].QueuedPassengers);
-        _logger.LogInformation("[{Elevator}] Doors opened. Picked up {Count} queued passengers; continuing", elevatorNumber, departedPassengers.Count);
+        _logger.LogInformation("[{Elevator}] Doors opened. Dropped off {} and Picked up {Count} queued passengers; continuing", elevatorNumber, droppedOffPassengerCount, departedPassengers.Count);
         Building.Floors[floor].PassengersDeparted(departedPassengers);
 
         if (!elevator.Passengers.Any())
@@ -241,10 +243,6 @@ public class BuildingService
             var queuedAnywhere = Building.Floors.Values
                 .SelectMany(f => f.QueuedPassengers)
                 .ToList();
-
-            await BroadcastElevator(elevator);
-            await BroadcastFloor(oldFloor);
-            await BroadcastFloor(floor);
 
             // No queued passengers anywhere, elevator is now idle
             if (queuedAnywhere.Count == 0)
@@ -256,10 +254,14 @@ public class BuildingService
                 await BroadcastFloor(oldFloor);
                 await BroadcastFloor(floor);
 
-            _logger.LogInformation("[{Elevator}] No more passengers and Floor {Floor} has no passengers queued; idling", elevatorNumber, floor);
+                _logger.LogInformation("[{Elevator}] No more passengers and Floor {Floor} has no passengers queued; idling", elevatorNumber, floor);
 
                 return;
             }
+
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+            await BroadcastFloor(floor);
 
             var dir = previousDirection ?? Direction.UP;
             var sameDirQueue = queuedAnywhere.Where(p => p.Direction == dir).ToList();
