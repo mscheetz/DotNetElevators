@@ -67,7 +67,7 @@ public class ElevatorManagementService: BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Exception thronw");
+                    _logger.LogError(ex, "Exception thrown");
                 }
             }
         }
