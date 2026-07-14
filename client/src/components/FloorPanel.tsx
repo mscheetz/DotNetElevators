@@ -1,5 +1,6 @@
 import type { FloorData } from "../types"
 import { FloorCard } from "./FloorCard"
+import { addFloor } from "../api"
 
 interface FloorPanelProps {
   floors: Map<number, FloorData>
@@ -12,7 +13,12 @@ export function FloorPanel({ floors }: FloorPanelProps) {
 
   return (
     <div className="floor-panel">
-      <h2>Floors</h2>
+      <div className="panel-header">
+        <h2>Floors</h2>
+        <button className="action-btn" onClick={() => addFloor()}>
+          + Floor
+        </button>
+      </div>
       <div className="floor-list">
         {sorted.length === 0 && (
           <div className="empty-state">Waiting for data...</div>

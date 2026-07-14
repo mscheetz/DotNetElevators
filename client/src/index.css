@@ -1,15 +1,15 @@
 :root {
-  --bg: #0f1117;
-  --surface: #1a1b23;
-  --surface-hover: #22242e;
-  --border: #2e303a;
-  --text: #9ca3af;
-  --text-h: #f3f4f6;
-  --accent: #c084fc;
-  --accent-dim: rgba(192, 132, 252, 0.15);
-  --green: #34d399;
-  --red: #f87171;
-  --amber: #fbbf24;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f0;
+  --border: #e0e0e0;
+  --text: #666666;
+  --text-h: #1a1a1a;
+  --accent: #7c3aed;
+  --accent-dim: rgba(124, 58, 237, 0.1);
+  --green: #16a34a;
+  --red: #dc2626;
+  --amber: #d97706;
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 }
@@ -40,6 +40,12 @@ body {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .dashboard-header h1 {
@@ -118,6 +124,10 @@ body {
   font-size: 13px;
 }
 
+.floor-card.inactive {
+  opacity: 0.35;
+}
+
 .floor-number {
   font-weight: 600;
   color: var(--text-h);
@@ -170,6 +180,10 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.elevator-card.inactive {
+  opacity: 0.35;
 }
 
 .elevator-card.vip {
@@ -227,4 +241,150 @@ body {
 
 .info-row .value.direction.idle {
   color: var(--text);
+}
+
+/* Panel headers */
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.panel-header h2 {
+  margin-bottom: 0;
+}
+
+/* Action & toggle buttons */
+
+.action-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.action-btn:hover {
+  background: var(--surface-hover);
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  line-height: 1;
+}
+
+.elevator-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Modal */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.modal-body select,
+.modal-body input[type="number"] {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.action-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.action-btn.primary:hover {
+  opacity: 0.9;
+}
+
+.action-btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -1,4 +1,5 @@
 import type { ElevatorData } from "../types"
+import { toggleElevator } from "../api"
 
 interface ElevatorCardProps {
   data: ElevatorData
@@ -20,10 +21,21 @@ export function ElevatorCard({ data }: ElevatorCardProps) {
     data.destinationFloor != null ? `→ ${data.destinationFloor}` : "—"
 
   return (
-    <div className={`elevator-card ${data.hasVIPs ? "vip" : ""}`}>
+    <div
+      className={`elevator-card ${data.hasVIPs ? "vip" : ""} ${data.isActive ? "" : "inactive"}`}
+    >
       <div className="elevator-header">
         <span className="elevator-id">🛗 #{data.id}</span>
-        {data.hasVIPs && <span className="vip-badge">⭐ VIP</span>}
+        <div className="elevator-header-right">
+          {data.hasVIPs && <span className="vip-badge">⭐ VIP</span>}
+          <button
+            className="toggle-btn"
+            onClick={() => toggleElevator(data.id)}
+            title={data.isActive ? "Deactivate elevator" : "Activate elevator"}
+          >
+            {data.isActive ? "🔴" : "⚫"}
+          </button>
+        </div>
       </div>
       <div className="elevator-info">
         <div className="info-row">

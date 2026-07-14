@@ -4,6 +4,7 @@ import {
   LogLevel,
 } from "@microsoft/signalr"
 import type { ElevatorData, FloorData, PassengerData } from "../types"
+import { getElevators, getFloors } from "../api"
 
 const HUB_URL = "http://localhost:5000/hubs/building"
 
@@ -52,6 +53,28 @@ export function useSignalR() {
   useEffect(() => {
     let cancelled = false
 
+    async function initLoadElevators() {
+      const initElevators = await getElevators();
+      initElevators.map(elevator => {
+        setElevators((prev) => {
+          const next = new Map(prev)
+          next.set(elevator.id, elevator)
+          return next
+        });
+      });
+    }
+    async function initLoadFloors() {
+      const initFloors = await getFloors();
+      initFloors.map(floor => {
+        setFloors((prev) => {
+          const next = new Map(prev)
+          next.set(floor.floorNumber, floor)
+          return next
+        });
+      });
+    }
+
+
     async function start() {
       const connection = new HubConnectionBuilder()
         .withUrl(HUB_URL)
@@ -93,6 +116,9 @@ export function useSignalR() {
         }
       }
     }
+
+    initLoadElevators();
+    initLoadFloors();
 
     start()
 

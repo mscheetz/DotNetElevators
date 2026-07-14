@@ -1,5 +1,6 @@
 import type { ElevatorData } from "../types"
 import { ElevatorCard } from "./ElevatorCard"
+import { addElevator } from "../api"
 
 interface ElevatorPanelProps {
   elevators: Map<number, ElevatorData>
@@ -10,7 +11,12 @@ export function ElevatorPanel({ elevators }: ElevatorPanelProps) {
 
   return (
     <div className="elevator-panel">
-      <h2>Elevators</h2>
+      <div className="panel-header">
+        <h2>Elevators</h2>
+        <button className="action-btn" onClick={() => addElevator()}>
+          + Elevator
+        </button>
+      </div>
       <div className="elevator-grid">
         {sorted.length === 0 && (
           <div className="empty-state">Waiting for data...</div>

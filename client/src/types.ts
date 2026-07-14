@@ -5,6 +5,7 @@ export interface ElevatorData {
   elevatorDirection: string
   passengerCount: number
   hasVIPs: boolean
+  isActive: boolean
 }
 
 export interface FloorData {
@@ -12,6 +13,7 @@ export interface FloorData {
   queuedPassengerCount: Record<string, number>
   queuedVIPCount: Record<string, number>
   currentElevatorCount: number
+  isActive: boolean
 }
 
 export interface PassengerData {

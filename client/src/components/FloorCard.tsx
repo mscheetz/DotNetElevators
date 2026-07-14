@@ -1,4 +1,5 @@
 import type { FloorData } from "../types"
+import { toggleFloor } from "../api"
 
 interface FloorCardProps {
   data: FloorData
@@ -29,7 +30,7 @@ export function FloorCard({ data }: FloorCardProps) {
   const total = up + down
 
   return (
-    <div className="floor-card">
+    <div className={`floor-card ${data.isActive ? "" : "inactive"}`}>
       <div className="floor-number">
         {data.floorNumber === 10 ? "🏢 " : ""}
         {data.floorNumber}
@@ -51,6 +52,13 @@ export function FloorCard({ data }: FloorCardProps) {
           🛗 {data.currentElevatorCount}
         </div>
       )}
+      <button
+        className="toggle-btn"
+        onClick={() => toggleFloor(data.floorNumber)}
+        title={data.isActive ? "Deactivate floor" : "Activate floor"}
+      >
+        {data.isActive ? "🔴" : "⚫"}
+      </button>
     </div>
   )
 }
