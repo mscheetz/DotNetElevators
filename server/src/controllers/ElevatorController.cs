@@ -6,10 +6,14 @@ namespace DotNetElevators;
 [ApiController]
 public class ElevatorController : ControllerBase
 {
+    private readonly BuildingService _buildingService;
     private readonly ILogger<ElevatorController> _logger;
 
-    public ElevatorController(ILogger<ElevatorController> logger)
+    public ElevatorController(
+        BuildingService buildingService,
+        ILogger<ElevatorController> logger)
     {
+        _buildingService = buildingService;
         _logger = logger;
     }
 
@@ -36,5 +40,25 @@ public class ElevatorController : ControllerBase
         var elevator = new ElevatorDTO(Building.Elevators[elevatorId]);
 
         return Ok(elevator);
+    }
+
+    [HttpPut("{elevatorId:int}")]
+    public async Task<IActionResult> ToggleElevatorActiveState(int elevatorId)
+    {
+        _logger.LogInformation("New request to toggle Elevator {Id} Active status", elevatorId);
+
+        var status = await _buildingService.ToggleElevatorStatus(elevatorId);
+
+        return status ? NoContent() : NotFound();
+    }
+
+    [HttpPost()]
+    public async Task<IActionResult> AddElevator()
+    {
+        _logger.LogInformation("New request to add Elevator");
+        
+        var elevatorId = await _buildingService.AddElevator();
+
+        return Ok(elevatorId);
     }
 }

@@ -8,17 +8,18 @@ public class NewPassengerRequest
     public bool Vip {get;set;}
     public bool RandomizeVip {get;set;}
 
-    public List<Passenger> ToPassengers()
+    public List<Passenger> ToPassengers(HashSet<int> invalidFloors)
     {
         var passengers = new List<Passenger>();
 
         if (Floor == 0)
         {
-            Floor = HelperService.GetRandomFloor();
+            Floor = HelperService.GetRandomFloor(invalidFloors);
         }
         if (Destination == 0)
         {
-            Destination = HelperService.GetRandomFloor(Floor);
+            invalidFloors.Add(Floor);
+            Destination = HelperService.GetRandomFloor(invalidFloors);
         }
 
         for (var i = 0; i < PassengerCount; i++)

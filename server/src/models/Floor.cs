@@ -5,10 +5,12 @@ public class Floor
 {
     public int FloorNumber { get;set; }
     public List<Passenger> QueuedPassengers {get;set;} = new();
+    public bool IsActive {get;set;}
 
     public Floor(int floorNumber)
     {
         FloorNumber = floorNumber;
+        IsActive = true;
     }
 
     public void QueuePassenger(Passenger passenger)

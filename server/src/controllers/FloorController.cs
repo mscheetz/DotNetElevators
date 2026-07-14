@@ -6,10 +6,14 @@ namespace DotNetElevators;
 [ApiController]
 public class FloorController : ControllerBase
 {
+    private readonly BuildingService _buildingService;
     private readonly ILogger<FloorController> _logger;
 
-    public FloorController(ILogger<FloorController> logger)
+    public FloorController(
+        BuildingService buildingService,
+        ILogger<FloorController> logger)
     {
+        _buildingService = buildingService;
         _logger = logger;
     }
 
@@ -36,5 +40,21 @@ public class FloorController : ControllerBase
         var floor = new FloorDTO(Building.Floors[floorNumber], Building.Elevators.Values);
 
         return Ok(floor);
+    }
+
+    [HttpPost()]
+    public async Task<IActionResult> AddFloor()
+    {
+        var floorNumber = await _buildingService.AddFloor();
+
+        return Ok(floorNumber);
+    }
+
+    [HttpPut("{floorNumber:int}")]
+    public async Task<IActionResult> ToggleFloorStatus(int floorNumber)
+    {
+        var status = await _buildingService.ToggleFloorStatus(floorNumber);
+
+        return Ok(status);
     }
 }

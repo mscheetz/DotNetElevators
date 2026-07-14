@@ -8,6 +8,7 @@ public class ElevatorDTO
     public string ElevatorDirection {get;set;}
     public int PassengerCount {get;set;}
     public bool HasVIPs {get;set;}
+    public bool IsActive {get;set;}
 
     public ElevatorDTO(Elevator elevator)
     {
@@ -17,6 +18,7 @@ public class ElevatorDTO
         ElevatorDirection = elevator.ElevatorDirection.HasValue ? elevator.ElevatorDirection.Value.ToString() : "Idle";
         PassengerCount = elevator.Passengers.Count;
         HasVIPs = elevator.Passengers.Any(p => p.VIP);
+        IsActive = !elevator.IsActive;
     }
 
 }

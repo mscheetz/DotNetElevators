@@ -10,6 +10,7 @@ public class Elevator
     public List<Passenger> Passengers {get;set;} = new();
     public Direction? ElevatorDirection = null;
     public bool DoorOpen {get;set;}
+    public bool IsActive {get;set;}
 
     public Elevator(int id)
     {
@@ -20,10 +21,16 @@ public class Elevator
         Passengers = new();
         ElevatorDirection = null;
         DoorOpen = false;
+        IsActive = true;
     }
 
     public HashSet<string> AddPassengers(List<Passenger> pendingPasengers) 
     {
+        if (!IsActive)
+        {            
+            return new();
+        }
+
         var occupancy = Passengers.Count;
         var pending_count = pendingPasengers.Count;
 
@@ -128,7 +135,7 @@ public class Elevator
 
     public bool DirectionChangedCheck()
     {
-        if (!Passengers.Any())
+        if (!Passengers.Any() || !IsActive)
         {
             return false;
         }

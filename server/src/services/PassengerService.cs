@@ -21,8 +21,13 @@ public class PassengerService
         var delay = Building.NEW_PASSENGER_SPAWN_SPEED_SEC * 1000;
         await Task.Delay(delay, token);
 
-        var floor = HelperService.GetRandomFloor();
-        var destination = HelperService.GetRandomFloor(floor);
+        var invalidFloors = Building.Floors.Values.Where(f => !f.IsActive).Select(f => f.FloorNumber).ToHashSet();
+
+        var floor = HelperService.GetRandomFloor(invalidFloors);
+
+        invalidFloors.Add(floor);
+
+        var destination = HelperService.GetRandomFloor(invalidFloors);
         var vipStatus = HelperService.GetRandomizedVIP();
 
         var passenger = new Passenger(floor, destination);

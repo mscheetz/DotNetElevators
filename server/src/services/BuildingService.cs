@@ -41,6 +41,11 @@ public class BuildingService
         var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
         var floor = elevator.CurrentFloor + variance;
 
+        if (!Building.Floors[floor].IsActive)
+        {
+            
+        }
+
         if (await GoToVIPFloor(elevator, floor))
         {
             return;
@@ -106,7 +111,7 @@ public class BuildingService
 
     public async Task<int?> CallElevator(int floor, Direction requestedDirection)
     {
-        var idleElevators = Building.Elevators.Values.Where(e => e.DestinationFloor is null).ToList();
+        var idleElevators = Building.Elevators.Values.Where(e => e.DestinationFloor is null && e.IsActive).ToList();
         
         if (!idleElevators.Any())
         {
@@ -115,14 +120,14 @@ public class BuildingService
         }
 
         var willPass = Building.Elevators.Values.Any(e =>
-            e.ElevatorDirection == requestedDirection &&
+            e.ElevatorDirection == requestedDirection && e.IsActive &&
             (
                 (e.ElevatorDirection == Direction.UP && e.CurrentFloor < floor && e.DestinationFloor >= floor)
                 ||
                 (e.ElevatorDirection == Direction.DOWN && e.CurrentFloor > floor && e.DestinationFloor <= floor)
             )
             ||
-            (e.CurrentFloor == floor && e.DoorOpen));
+            (e.CurrentFloor == floor && e.DoorOpen && e.IsActive));
 
         if (willPass)
         {
@@ -148,6 +153,103 @@ public class BuildingService
         _logger.LogInformation("[{Elevator}] **** Elevator now in service! ****", bestElevator.Id);
 
         return bestElevator.Id;
+    }
+
+    public async Task<int> AddFloor()
+    {
+        var newFloorNumber = Building.Floors.Keys.Max() + 1;
+        var newFloor = new Floor(newFloorNumber);
+
+        Building.MAX_FLOOR = newFloorNumber;
+        Building.Floors.TryAdd(newFloorNumber, newFloor);
+
+        await BroadcastFloor(newFloorNumber);
+
+        return newFloorNumber;
+    }
+
+    public async Task<bool> ToggleFloorStatus(int floorNumber)
+    {
+        var topFloor = Building.Floors.Keys.Max();
+        var reverseDown = topFloor == floorNumber || topFloor == (floorNumber + 1);
+        var reverseUp = floorNumber == 1 || floorNumber == 2;
+
+        var queuedPassengers = Building.Floors.Values.SelectMany(f => f.QueuedPassengers).Where(p => p.Destination == floorNumber);
+
+        foreach (var passenger in queuedPassengers)
+        {
+            passenger.Destination--;
+        }
+
+        var elevators = Building.Elevators.Values.Where(e => e.CurrentFloor == floorNumber || e.DestinationFloor == floorNumber);
+
+        foreach (var elevator in elevators)
+        {
+            if (elevator.CurrentFloor == floorNumber)
+            {
+                if (reverseDown && elevator.ElevatorDirection == Direction.UP)
+                {
+                    elevator.CurrentFloor--;
+                    elevator.ElevatorDirection = Direction.DOWN;
+                    _logger.LogInformation("[{Elevator}]: Moved to new floor and changed direction", elevator.Id);
+                }
+                else if (reverseUp && elevator.ElevatorDirection == Direction.DOWN)
+                {
+                    elevator.CurrentFloor++;
+                    elevator.ElevatorDirection = Direction.UP;
+                    _logger.LogInformation("[{Elevator}]: Moved to new floor and changed direction", elevator.Id);
+                }
+                else
+                {                    
+                    elevator.CurrentFloor--;
+                    _logger.LogInformation("[{Elevator}]: Moved to new floor", elevator.Id);
+                }
+            }
+            if (elevator.DestinationFloor == floorNumber)
+            {
+                elevator.DestinationFloor = elevator.DestinationFloor == 1 ? elevator.DestinationFloor++ : elevator.DestinationFloor--;
+                _logger.LogInformation("[{Elevator}]: Destination changed to new floor", elevator.Id);
+            }
+            var passengers = elevator.Passengers.Where(p => p.Destination == floorNumber);
+
+            foreach (var passenger in passengers)
+            {
+                passenger.Destination--;
+            }
+
+            await BroadcastElevator(elevator);
+        }
+
+        var currentStatus = Building.Floors[floorNumber].IsActive;
+
+        Building.Floors[floorNumber].IsActive = !currentStatus;
+
+        return true;
+    }
+
+    public async Task<bool> ToggleElevatorStatus(int elevatorId)
+    {
+        if (Building.Elevators.TryGetValue(elevatorId, out Elevator? elevator) && elevator is null)
+        {
+            return false;
+        }
+
+        elevator!.IsActive = !elevator.IsActive;
+
+        return true;
+    }
+
+    public async Task<int> AddElevator()
+    {
+        var elevatorId = Building.Elevators.Keys.Max() + 1;
+
+        var elevator = new Elevator(elevatorId);
+
+        Building.Elevators.TryAdd(elevatorId, elevator);
+
+        await BroadcastElevator(elevator);
+
+        return elevatorId;
     }
 
     public Task BroadcastElevator(Elevator elevator)

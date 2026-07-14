@@ -70,11 +70,13 @@ public class PassengerController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddPassengers([FromBody]NewPassengerRequest incoming)
     {
-        if (incoming.Floor < 0 || incoming.Floor > Building.MAX_FLOOR)
+        var invalidFloors = Building.Floors.Values.Where(f => !f.IsActive).Select(f => f.FloorNumber).ToHashSet();
+
+        if (incoming.Floor < 0 || incoming.Floor > Building.MAX_FLOOR || invalidFloors.Contains(incoming.Floor))
         {
             return BadRequest("Invalid Floor");
         }
-        if (incoming.Destination < 0 || incoming.Destination > Building.MAX_FLOOR)
+        if (incoming.Destination < 0 || incoming.Destination > Building.MAX_FLOOR || invalidFloors.Contains(incoming.Destination))
         {
             return BadRequest("Invalid Destination");
         }
@@ -83,7 +85,7 @@ public class PassengerController : ControllerBase
             incoming.PassengerCount = 1;
         }
 
-        var newPassengers = incoming.ToPassengers();
+        var newPassengers = incoming.ToPassengers(invalidFloors);
 
         foreach (var passenger in newPassengers)
         {
