@@ -6,10 +6,12 @@ public class FloorDTO
     public Dictionary<string, int> QueuedPassengerCount {get;set;}
     public Dictionary<string, int> QueuedVIPCount {get;set;}
     public int CurrentElevatorCount {get;set;}
+    public bool IsActive {get;set;}
 
     public FloorDTO(Floor floor, IEnumerable<Elevator> elevators)
     {
         FloorNumber = floor.FloorNumber;
+        IsActive = floor.IsActive;
         QueuedPassengerCount = new()
         {
             { Direction.DOWN.ToString(), floor.QueuedPassengers.Count(p => p.Direction == Direction.DOWN) },

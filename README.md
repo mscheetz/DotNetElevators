@@ -8,6 +8,7 @@ Office building elevator simulator using `Channel<T>`-based background services 
 - ASP.NET Core (`Microsoft.NET.Sdk.Web`)
 - SignalR for real-time client updates
 - `System.Threading.Channels` for per-elevator async queues
+- React
 
 ## Architecture
 
@@ -64,6 +65,28 @@ dotnet run --project server/test
 ```
 
 Connects to `http://localhost:5000/hubs/building` and prints events. Press Enter to exit.
+
+## Web App
+
+React dashboard with real-time SignalR updates showing floors, elevators, and controls for managing the building.
+
+![Building Dashboard](app.png)
+
+### Features
+
+- Real-time floor status with queued passenger counts (▲ UP / ▼ DOWN) and VIP badges
+- Elevator cards showing current floor, direction, destination, passenger count, and VIP status
+- Toggle floors/elevators active/inactive
+- Add new floors and elevators
+- Spawn passengers with optional VIP status
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Opens `http://localhost:5173` by default. Requires the server to be running on `http://localhost:5000`.
 
 ## REST API Endpoints
 

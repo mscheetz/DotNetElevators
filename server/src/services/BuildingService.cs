@@ -38,15 +38,26 @@ public class BuildingService
     {
         var elevator = Building.Elevators[elevatorNumber];
 
+        var oldFloor = elevator.CurrentFloor;
         var variance = elevator.ElevatorDirection == Direction.UP ? 1 : -1;
         var floor = elevator.CurrentFloor + variance;
 
         if (!Building.Floors[floor].IsActive)
         {
-            
+            elevator.CurrentFloor = floor;
+            await BroadcastElevator(elevator);
+            await BroadcastFloor(oldFloor);
+
+            if (floor != destinationFloor)
+            {
+                var queueItem = new QueueItem(elevatorNumber, destinationFloor);
+                await _queueManager.AddToQueueAsync(queueItem);
+            }
+
+            return;
         }
 
-        if (await GoToVIPFloor(elevator, floor))
+        if (await GoToVIPFloor(elevator, floor, oldFloor))
         {
             return;
         }
@@ -55,6 +66,50 @@ public class BuildingService
 
         Building.Floors[floor].PassengersDeparted(departedPassengers);
 
+        if (elevator.ElevatorDirection is null && Building.Floors.Values.Any(f => f.QueuedPassengers.Any()))
+        {
+            var queuedFloors = Building.Floors.Values.Where(f => f.QueuedPassengers.Any());
+            var queuedCounts = queuedFloors.SelectMany(f => f.QueuedPassengers)
+                                                .GroupBy(p => p.Direction)
+                                                .ToDictionary(k => k.Key, v => v.Count());            
+
+            var up = queuedCounts.GetValueOrDefault(Direction.UP);
+            var down = queuedCounts.GetValueOrDefault(Direction.DOWN);
+
+            _logger.LogInformation("-- Queued Passenger Counts: UP {UP} DOWN {DOWN} --", up, down);
+
+            var groundFloorCount = Building.Elevators.Values.Count(e => e.DestinationFloor == 1);
+            var topFloorCount = Building.Elevators.Values.Count(e => e.DestinationFloor == Building.MAX_FLOOR);
+
+            var target = up >= down && topFloorCount == 0 ? Building.MAX_FLOOR
+                       : down > up && groundFloorCount == 0 ? 1
+                       : up > down ? Building.MAX_FLOOR
+                       : 1;
+
+            if (target != floor)
+            {
+                elevator.DestinationFloor = target;
+                elevator.ElevatorDirection = target > floor ? Direction.UP : Direction.DOWN;
+
+                _logger.LogInformation("[{Elevator}]: Elevator is empty, heading to {Floor} to pick up queued passengers", elevatorNumber, elevator.DestinationFloor);
+                await BroadcastElevator(elevator);
+
+                destinationFloor = elevator.DestinationFloor!.Value;
+            }
+            else
+            {
+                var reverseTarget = target == Building.MAX_FLOOR ? 1 : Building.MAX_FLOOR;
+
+                _logger.LogInformation("[{Elevator}]: Elevator is empty at terminal floor, reversing to {Floor}", elevatorNumber, reverseTarget);
+                elevator.DestinationFloor = reverseTarget;
+                elevator.ElevatorDirection = reverseTarget > floor ? Direction.UP : Direction.DOWN;
+                await BroadcastElevator(elevator);
+
+                destinationFloor = reverseTarget;
+            }
+        }
+
+        await BroadcastFloor(oldFloor);
         await BroadcastFloor(floor);
 
         var vips = elevator.Passengers.Where(p => p.VIP);
@@ -82,7 +137,7 @@ public class BuildingService
         }
     }
 
-    private async Task<bool> GoToVIPFloor(Elevator elevator, int floor)
+    private async Task<bool> GoToVIPFloor(Elevator elevator, int floor, int oldFloor)
     {
         var vips = elevator.Passengers.Where(p => p.VIP);
 
@@ -94,10 +149,13 @@ public class BuildingService
 
             if (closestDestination != floor)
             {
+                await BroadcastFloor(oldFloor);
+
                 elevator.CurrentFloor = floor;
                 elevator.DestinationFloor = closestDestination;
 
                 await BroadcastElevator(elevator);
+                await BroadcastFloor(floor);
                 _logger.LogInformation("[{Elevator}]: VIP destination {Destination}; skipping this floor ({Floor})", elevator.Id, closestDestination, floor);
                 var queueItem = new QueueItem(elevator.Id, closestDestination);
                 await _queueManager.AddToQueueAsync(queueItem);
@@ -143,9 +201,10 @@ public class BuildingService
         }
 
         bestElevator.DestinationFloor = floor;
-        bestElevator.ElevatorDirection = bestElevator.CurrentFloor > floor ? Direction.DOWN : Direction.UP;;
+        bestElevator.ElevatorDirection = bestElevator.CurrentFloor > floor ? Direction.DOWN : Direction.UP;
 
         await BroadcastElevator(bestElevator);
+        await BroadcastFloor(floor);
 
         var queueItem = new QueueItem(bestElevator.Id, floor);        
         await _queueManager.AddToQueueAsync(queueItem);
@@ -229,12 +288,12 @@ public class BuildingService
 
     public async Task<bool> ToggleElevatorStatus(int elevatorId)
     {
-        if (Building.Elevators.TryGetValue(elevatorId, out Elevator? elevator) && elevator is null)
+        if (!Building.Elevators.TryGetValue(elevatorId, out var elevator))
         {
             return false;
         }
 
-        elevator!.IsActive = !elevator.IsActive;
+        elevator.IsActive = !elevator.IsActive;
 
         return true;
     }

@@ -18,7 +18,7 @@ public class ElevatorDTO
         ElevatorDirection = elevator.ElevatorDirection.HasValue ? elevator.ElevatorDirection.Value.ToString() : "Idle";
         PassengerCount = elevator.Passengers.Count;
         HasVIPs = elevator.Passengers.Any(p => p.VIP);
-        IsActive = !elevator.IsActive;
+        IsActive = elevator.IsActive;
     }
 
 }

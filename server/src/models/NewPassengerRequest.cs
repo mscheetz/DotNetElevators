@@ -12,20 +12,20 @@ public class NewPassengerRequest
     {
         var passengers = new List<Passenger>();
 
-        if (Floor == 0)
-        {
-            Floor = HelperService.GetRandomFloor(invalidFloors);
-        }
-        if (Destination == 0)
-        {
-            invalidFloors.Add(Floor);
-            Destination = HelperService.GetRandomFloor(invalidFloors);
-        }
-
         for (var i = 0; i < PassengerCount; i++)
         {
-            var passenger = new Passenger(Floor, Destination);
+            if (Floor == 0)
+            {
+                Floor = HelperService.GetRandomFloor(invalidFloors);
+            }
+            if (Destination == 0)
+            {
+                invalidFloors.Add(Floor);
+                Destination = HelperService.GetRandomFloor(invalidFloors);
+            }
             
+            var passenger = new Passenger(Floor, Destination);            
+
             if (Vip)
             {
                 passenger.VIP = true;

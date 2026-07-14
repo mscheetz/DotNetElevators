@@ -42,6 +42,16 @@ public class FloorController : ControllerBase
         return Ok(floor);
     }
 
+    [HttpGet("inactive")]
+    public async Task<IActionResult> GetInactiveFloors()
+    {
+        _logger.LogInformation("New request for inactive floors");
+
+        var inactiveFloors = Building.Floors.Values.Where(f => !f.IsActive).Select(f => f.FloorNumber).ToHashSet();
+
+        return Ok(inactiveFloors);
+    }
+
     [HttpPost()]
     public async Task<IActionResult> AddFloor()
     {
